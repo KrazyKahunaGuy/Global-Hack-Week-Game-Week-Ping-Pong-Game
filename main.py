@@ -31,15 +31,16 @@ running = True
 
 
 class Paddle:
-    def __init__(self, id) -> None:
+    def __init__(self, id: int, is_ai: bool) -> None:
         self.width: int = PADDLE_WIDTH
         self.height: int = PADDLE_HEIGHT
         self.id: int = id
         self.pos: float = SCREEN_HEIGHT // 2 - 50
         self.hit: bool = False
         self.hit_time: int
-        self.score = 0
-        self.speed = PADDLE_SPEED
+        self.score: int = 0
+        self.speed: int = PADDLE_SPEED
+        self.is_ai: bool = is_ai
         # Load paddle images and apply surface blur effect
         self.paddle_image: pygame.Surface = pygame.image.load(
             'assets/paddle.png').convert_alpha()
@@ -63,6 +64,14 @@ class Paddle:
         if time_diff > 200:  # Stop the wobbling after 200ms
             return False
         return True
+    
+    # Define a function to handle an AI player
+    def ai_move(self, ball):
+        if self.is_ai:
+            if self.pos + self.height/2 < ball.pos_y:
+                self.pos += self.speed/CLOCK.get_fps()
+            elif self.pos + self.height/2 > ball.pos_y:
+                self.pos -= self.speed/CLOCK.get_fps()
 
     # Define a function to handle a player winning
     def win(self):
@@ -150,8 +159,8 @@ while game_running:
 
 def game(game_paused=game_paused):
     # Setup paddles
-    paddle_1 = Paddle(id=1)
-    paddle_2 = Paddle(id=2)
+    paddle_1 = Paddle(id=1, is_ai=False)
+    paddle_2 = Paddle(id=2, is_ai=True)
     # Setup ball
     ball = Ball()
     winner = None
@@ -170,6 +179,12 @@ def game(game_paused=game_paused):
             # Update the ball state
             ball.update()
 
+            # Check for AI's
+            if paddle_1.is_ai:
+                paddle_1.ai_move(ball=ball)
+            if paddle_2.is_ai:
+                paddle_2.ai_move(ball=ball)
+
             # Handle collision for paddle belonging to player 1
             if ball.pos_x < paddle_1.width and paddle_1.pos < ball.pos_y < paddle_1.pos + paddle_1.height:
                 ball.vel_x = -ball.vel_x
@@ -187,7 +202,6 @@ def game(game_paused=game_paused):
                 paddle_2.score += 1
                 if paddle_2.score == GAME_POINT:
                     paddle_1.score = 0
-                    game_ended = True
                     winner = paddle_2
                 ball.pos_x, ball.pos_y = SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2
                 ball.vel_x, ball.vel_y = random.choice(
@@ -196,7 +210,6 @@ def game(game_paused=game_paused):
                 paddle_1.score += 1
                 if paddle_1.score == GAME_POINT:
                     paddle_1.score = 0
-                    game_ended = True
                     winner = paddle_1
                 ball.pos_x, ball.pos_y = SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2
                 ball.vel_x, ball.vel_y = random.choice(
@@ -204,19 +217,21 @@ def game(game_paused=game_paused):
 
             keys = pygame.key.get_pressed()
             # For player 1
-            if keys[pygame.K_w]:
-                # Adjust player speed using delta time
-                paddle_1.pos -= paddle_1.speed * CLOCK.get_time() / 1000
-            if keys[pygame.K_s]:
-                # Adjust player speed using delta time
-                paddle_1.pos += paddle_1.speed * CLOCK.get_time() / 1000
+            if not paddle_1.is_ai:
+                if keys[pygame.K_w]:
+                    # Adjust player speed using delta time
+                    paddle_1.pos -= paddle_1.speed * CLOCK.get_time() / 1000
+                if keys[pygame.K_s]:
+                    # Adjust player speed using delta time
+                    paddle_1.pos += paddle_1.speed * CLOCK.get_time() / 1000
             # For player 2
-            if keys[pygame.K_UP]:
-                # Adjust player speed using delta time
-                paddle_2.pos -= paddle_2.speed * CLOCK.get_time() / 1000
-            if keys[pygame.K_DOWN]:
-                # Adjust player speed using delta time
-                paddle_2.pos += paddle_2.speed * CLOCK.get_time() / 1000
+            if not paddle_2.is_ai:
+                if keys[pygame.K_UP]:
+                    # Adjust player speed using delta time
+                    paddle_2.pos -= paddle_2.speed * CLOCK.get_time() / 1000
+                if keys[pygame.K_DOWN]:
+                    # Adjust player speed using delta time
+                    paddle_2.pos += paddle_2.speed * CLOCK.get_time() / 1000
 
             # Clamp player positions with screen bounds
             paddle_1.pos = max(
